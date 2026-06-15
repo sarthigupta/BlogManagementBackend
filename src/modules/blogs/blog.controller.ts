@@ -3,6 +3,7 @@ import prisma from "../../infrastructure/db/prisma.js";
 import type { AuthContext } from "../../types/auth.types.js";
 import { blogSchema } from "./blog.schema.js";
 import { generateSlug, generateExcerpt } from "../../helper/blog.helper.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 
 export async function createBlog(c: Context) {
   try {
@@ -64,11 +65,39 @@ export async function createBlog(c: Context) {
 
 export async function getAllBlogs(c: Context) {
   try {
+    const page = Number(c.req.query("page") || 1);
+    const limit = Number(c.req.query("limit") || 10);
+    const skip = (page - 1) * limit;
+    
+
+    const search = c.req.query("search");
+    const status = c.req.query("status");
+
+    const whereClause: Prisma.BlogWhereInput = {};
+    if (search) {
+      whereClause.title = {
+        contains: search,
+
+        mode: "insensitive",
+      };
+    }
+
+    if (status) {
+      whereClause.status = status;
+    }
+    const totalBlogs = await prisma.blog.count({
+        where: whereClause
+    });
+
     const blogs = await prisma.blog.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
       select: {
         id: true,
         title: true,
         slug: true,
+        excerpt: true,
         createdAt: true,
 
         author: {
@@ -87,6 +116,12 @@ export async function getAllBlogs(c: Context) {
         message: "Blogs retrieved successfully",
         success: true,
         blogs,
+        pagination: {
+          page,
+          limit,
+          totalBlogs,
+          totalPages: Math.ceil(totalBlogs / limit),
+        },
       },
       200,
     );
@@ -277,6 +312,7 @@ export async function update(c: Context) {
         title: true,
         slug: true,
         updatedAt: true,
+        excerpt: true
       },
     });
 
