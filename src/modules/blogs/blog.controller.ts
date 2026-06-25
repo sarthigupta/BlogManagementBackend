@@ -4,7 +4,7 @@ import type { AuthContext } from "../../types/auth.types.js";
 import { blogSchema } from "./blog.schema.js";
 import { generateSlug, generateExcerpt } from "../../helper/blog.helper.js";
 import type { Prisma } from "../../generated/prisma/client.js";
-
+import redis from "../../common/lib/redis.js";
 export async function createBlog(c: Context) {
   try {
     const body = await c.req.json();
@@ -68,7 +68,6 @@ export async function getAllBlogs(c: Context) {
     const page = Number(c.req.query("page") || 1);
     const limit = Number(c.req.query("limit") || 10);
     const skip = (page - 1) * limit;
-    
 
     const search = c.req.query("search");
     const status = c.req.query("status");
@@ -86,7 +85,7 @@ export async function getAllBlogs(c: Context) {
       whereClause.status = status;
     }
     const totalBlogs = await prisma.blog.count({
-        where: whereClause
+      where: whereClause,
     });
 
     const blogs = await prisma.blog.findMany({
@@ -149,6 +148,14 @@ export async function getBlogBySlug(c: Context) {
         404,
       );
     }
+    const cachedBlog = await redis.get(`blog:${slug}`);
+
+    if (cachedBlog) {
+      return c.json({
+        source: "cache",
+        data: cachedBlog,
+      });
+    }
     const blog = await prisma.blog.findUnique({
       where: {
         slug: slug,
@@ -176,6 +183,9 @@ export async function getBlogBySlug(c: Context) {
         404,
       );
     }
+    await redis.set(`blog:${slug}`, blog, {
+      ex: 60 * 60,
+    });
     return c.json(
       {
         message: "Blog retrieved successfully",
@@ -251,7 +261,7 @@ export async function deleteBlog(c: Context) {
   }
 }
 
-export async function update(c: Context) {
+export async function updateBlog(c: Context) {
   try {
     const slug = c.req.param("slug")!;
     const body = await c.req.json();
@@ -312,9 +322,10 @@ export async function update(c: Context) {
         title: true,
         slug: true,
         updatedAt: true,
-        excerpt: true
+        excerpt: true,
       },
     });
+    await redis.del(`blog:${slug}`);
 
     return c.json(
       {
