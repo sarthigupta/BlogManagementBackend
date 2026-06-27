@@ -14,6 +14,10 @@ This project provides a REST API for user authentication and blog management. It
 - PostgreSQL database access through Prisma
 - Docker and Docker Compose support for local development
 
+### Design
+
+![Architecture Diagram](./images/architecture.png)
+
 ## Architecture
 
 The project is designed around two main entities, `Users` and `Blogs`, with authentication protecting write access and blog listing endpoints.
@@ -25,46 +29,8 @@ The project is designed around two main entities, `Users` and `Blogs`, with auth
 - Users can update and delete only their own blogs.
 - Users must authenticate before seeing the full blog list, similar to a private publishing platform.
 
-### Domain Model
 
-#### Users
 
-- `id`
-- `name`
-- `email`
-- `username`
-- `password`
-- `bio`
-- `role`
-- `avatarUrl`
-- `createdAt`
-- `updatedAt`
-- `blogs` relation
-
-#### Blogs
-
-- `id`
-- `title`
-- `description`
-- `content`
-- `authorId`
-- `createdAt`
-- `updatedAt`
-- `deletedAt`
-
-### Route Design
-
-Your original sketch planned these routes:
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /blogs`
-- `GET /blogs`
-- `GET /blogs/:id`
-- `PUT /blogs/:id`
-- `DELETE /blogs/:id`
-
-The current implementation uses `POST /auth/signup` instead of `POST /auth/register`, but the rest of the API follows the same idea.
 
 ### Request Flow
 
@@ -97,6 +63,7 @@ The current implementation uses `POST /auth/signup` instead of `POST /auth/regis
 ## Project Structure
 
 ```text
+images/
 src/
   common/
   helper/
